@@ -1,5 +1,6 @@
 import random
 import numpy as np
+import logging
 
 
 class GeneticAlgorithmSAT:
@@ -24,38 +25,44 @@ class GeneticAlgorithmSAT:
             )
             if clause_satisfied:
                 score += 1
-            return score
+        return score
 
     def _selection(self, fitnesses):
-        total_fitness = sum(fitnesses)
-        probabilities = [f / total_fitness for f in fitnesses]
-        selected_indices = np.random.choice(self.population_size, self.population_size, p=probabilities)
-        return self.population[selected_indices]
+        # select individuals for the next gen using tournament selection
+        selected = []
+
+        for _ in range(self.population_size):
+            tournament = random.sample(range(self.population_size), 3)
+            selected.append(max(tournament, key=lambda i: fitnesses[i]))
+        return self.population[selected]
 
     def _crossover(self, parent1, parent2):
-        crossover_point = random.randint(1, self.num_variables - 1)
-        child1 = np.concatenate((parent1[:crossover_point], parent2[crossover_point:]))
-        child2 = np.concatenate((parent2[:crossover_point], parent1[crossover_point:]))
+        # Perform uniform crossover between 2 parents
+        mask = np.random.randint(self.num_variables) < 0.5
+        child1 = np.where(mask, parent1, parent2)
+        child2 = np.where(mask, parent2, parent1)
         return child1, child2
 
     def _mutate(self, individual):
-        for i in range(self.num_variables):
-            if random.random() < self.mutation_rate:
-                individual[i] = 1 - individual[i]
+        # Mutate an individual
+        mutation_mask = np.random.randint(self.num_variables) < self.mutation_rate
+        individual[mutation_mask] = 1 - individual[mutation_mask]
         return individual
 
     def run(self):
         best_solution = None
-        best_fitness =  -1
+        best_fitness = -1
 
         for generation in range(self.generations):
             fitnesses = [self._fitness(individual) for individual in self.population]
             max_fitness = max(fitnesses)
+
             if max_fitness > best_fitness:
                 best_fitness = max_fitness
                 best_solution = self.population[np.argmax(fitnesses)]
 
             if best_fitness == len(self.clauses):
+                logging.info(f"Perfect solution found in gen {generation}")
                 break
 
             selected_population = self._selection(fitnesses)

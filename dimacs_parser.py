@@ -1,5 +1,6 @@
 import re
 
+
 def parse_dimacs(file_path):
     with open(file_path, 'r') as file:
         content = file.readlines()
